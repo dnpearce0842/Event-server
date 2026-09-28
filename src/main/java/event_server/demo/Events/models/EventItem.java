@@ -1,4 +1,4 @@
-package event_server.demo;
+package event_server.demo.Events.models;
 
 import java.time.Instant;
 import java.util.ArrayList;

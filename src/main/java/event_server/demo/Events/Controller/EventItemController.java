@@ -1,7 +1,8 @@
-package event_server.demo;
+package event_server.demo.Events.Controller;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import event_server.demo.Events.Repository.EventItemRepository;
+import event_server.demo.Events.models.EventItem;
 
 @RestController
 @RequestMapping("/api/events")
@@ -38,7 +42,7 @@ public class EventItemController {
 
     @PostMapping
     public ResponseEntity<EventItem> createEvent(@RequestBody EventItem eventItem) {
-        eventItem.setId(null);
+        eventItem.setId(UUID.randomUUID().toString());
         if (eventItem.getDateCreated() == null) {
             eventItem.setDateCreated(Instant.now());
         }

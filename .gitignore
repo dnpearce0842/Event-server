@@ -39,5 +39,7 @@ out/
 ### Local ###
 .env
 .properties
+atlas-credentials.env
+application.properties
 
 

@@ -14,7 +14,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestHeader;
 
+import event_server.demo.Account.TokenService;
 import event_server.demo.Events.Repository.EventItemRepository;
 import event_server.demo.Events.models.EventItem;
 
@@ -23,9 +25,11 @@ import event_server.demo.Events.models.EventItem;
 @CrossOrigin(origins = "${app.cors.allowed-origin:http://localhost:3000}")
 public class EventItemController {
     private final EventItemRepository eventItems;
+    private final TokenService tokens;
 
-    public EventItemController(EventItemRepository eventItems) {
+    public EventItemController(EventItemRepository eventItems, TokenService tokens) {
         this.eventItems = eventItems;
+        this.tokens = tokens;
     }
 
     @GetMapping
@@ -41,12 +45,24 @@ public class EventItemController {
     }
 
     @PostMapping
-    public ResponseEntity<EventItem> createEvent(@RequestBody EventItem eventItem) {
+    public ResponseEntity<?> createEvent(@RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestBody EventItem eventItem) {
+        String userId = tokens.validateAndGetUserId(bearerToken(authorization));
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("A valid bearer token is required to create an event.");
+        }
+
         eventItem.setId(UUID.randomUUID().toString());
+        eventItem.setOwnerId(userId);
         if (eventItem.getDateCreated() == null) {
             eventItem.setDateCreated(Instant.now());
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(eventItems.save(eventItem));
+    }
+
+    private String bearerToken(String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) return null;
+        return authorization.substring("Bearer ".length()).trim();
     }
 
     @DeleteMapping("/{id}")

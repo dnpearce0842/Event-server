@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import event_server.demo.Account.Repository.UserRepository;
+import event_server.demo.Account.TokenService;
 import event_server.demo.Account.models.LoginRequest;
 import event_server.demo.Account.models.SignupRequest;
 import event_server.demo.Account.models.User;
@@ -25,16 +26,18 @@ import event_server.demo.Account.models.UserResponse;
 @CrossOrigin(origins = "${app.cors.allowed-origin:http://localhost:3000}")
 public class AccountsController {
     private final UserRepository accounts;
+    private final TokenService tokens;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(12);
 
-    public AccountsController(UserRepository accounts) {
+    public AccountsController(UserRepository accounts, TokenService tokens) {
         this.accounts = accounts;
+        this.tokens = tokens;
     }
 
     @PostMapping("/signup")
     public ResponseEntity<?> createAccount(@RequestBody SignupRequest request) {
         if (request == null || request.username() == null || request.username().isBlank()
-                || request.email() == null || !request.email().contains("@")
+                || request.email() == null || !request.email().contains("@") || !request.email().contains(".")
                 || request.password() == null || request.password().length() < 12) {
             return ResponseEntity.badRequest().body("Provide a username, valid email, and password of at least 12 characters.");
         }
@@ -46,7 +49,8 @@ public class AccountsController {
 
         User user = new User(request.username().trim(), email, passwordEncoder.encode(request.password()));
         user.setId(UUID.randomUUID().toString());
-        return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(accounts.save(user)));
+        User savedUser = accounts.save(user);
+        return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(savedUser, tokens.createToken(savedUser.getId())));
     }
 
     @PostMapping("/login")
@@ -57,7 +61,7 @@ public class AccountsController {
 
         return accounts.findByEmail(normalizeEmail(request.email()))
                 .filter(user -> passwordEncoder.matches(request.password(), user.getPassword()))
-                .<ResponseEntity<?>>map(user -> ResponseEntity.ok(UserResponse.from(user)))
+                .<ResponseEntity<?>>map(user -> ResponseEntity.ok(UserResponse.from(user, tokens.createToken(user.getId()))))
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password."));
     }
 
